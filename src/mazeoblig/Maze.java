@@ -20,17 +20,22 @@ import simulator.*;
  */
 import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 /**
- * Tegner opp maze i en applet, basert på definisjon som man finner på RMIServer
- * RMIServer på sin side  henter størrelsen fra definisjonen i Maze
+ * Tegner opp maze i en applet, basert pï¿½ definisjon som man finner pï¿½ RMIServer
+ * RMIServer pï¿½ sin side  henter stï¿½rrelsen fra definisjonen i Maze
  * @author asd
  *
  */
 public class Maze extends Applet {
 
-	private BoxMazeInterface bm;
-	private Box[][] maze;
-	public static int DIM = 10;
+	private static final long serialVersionUID = -4427531806078172174L;
+	
+	public BoxMazeInterface bm;
+	public Box[][] maze;
+	public static int DIM = 30;
 	private int dim = DIM;
 
 	static int xp;
@@ -40,15 +45,16 @@ public class Maze extends Applet {
 	private String server_hostname;
 	private int server_portnumber;
 
+	public VirtualUser self;
+
 
 	/**
 	 * Henter labyrinten fra RMIServer
 	 */
 	public void init() {
-		int size = dim;
 		/*
 		 ** Kobler opp mot RMIServer, under forutsetning av at disse
-		 ** kjører på samme maskin. Hvis ikke må oppkoblingen
+		 ** kjï¿½rer pï¿½ samme maskin. Hvis ikke mï¿½ oppkoblingen
 		 ** skrives om slik at dette passer med virkeligheten.
 		 */
 		if (server_hostname == null)
@@ -66,9 +72,17 @@ public class Maze extends Applet {
 			bm = (BoxMazeInterface) r.lookup(RMIServer.MazeName);
 			maze = bm.getMaze();
 			
+			/*
+			 * Simulerer et antall spillere
+			 */
+			LotsOfPlayers pl = new LotsOfPlayers(100, this);
+			pl.setDaemon(true);
+			pl.start();
+
+			
 /*
-** Finner løsningene ut av maze - se forøvrig kildekode for VirtualMaze for ytterligere
-** kommentarer. Løsningen er implementert med backtracking-algoritme
+** Finner lï¿½sningene ut av maze - se forï¿½vrig kildekode for VirtualMaze for ytterligere
+** kommentarer. Lï¿½sningen er implementert med backtracking-algoritme
 *
 			VirtualUser vu = new VirtualUser(maze);
 			PositionInMaze [] pos;
@@ -88,15 +102,68 @@ public class Maze extends Applet {
 		}
 		catch (NotBoundException f) {
 			/*
-			 ** En exception her er en indikasjon på at man ved oppslag (lookup())
-			 ** ikke finner det objektet som man søker.
-			 ** Årsaken til at dette skjer kan være mange, men vær oppmerksom på
+			 ** En exception her er en indikasjon pï¿½ at man ved oppslag (lookup())
+			 ** ikke finner det objektet som man sï¿½ker.
+			 ** ï¿½rsaken til at dette skjer kan vï¿½re mange, men vï¿½r oppmerksom pï¿½
 			 ** at hvis hostname ikke er OK (RMIServer gir da feilmelding under
-			 ** oppstart) kan være en årsak.
+			 ** oppstart) kan vï¿½re en ï¿½rsak.
 			 */
 			System.err.println("Not Bound Exception: " + f.getMessage());
 			System.exit(0);
 		}
+	}
+	
+	// Thread to start a number of players
+	class LotsOfPlayers extends Thread {
+		private int n;
+		private Maze mz;
+		
+		LotsOfPlayers(int c, Maze m) {
+			n = c; mz = m;
+		}
+		
+		public void run() {
+			for ( int i = n; i != 0; i--) {
+				Worker w = new Worker(mz);
+				w.setDaemon(true);
+				w.start();
+				try {
+					sleep(150);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private class Worker extends Thread {
+		private Maze mz;
+		
+		public Worker(Maze m) {
+			mz = m;
+		}
+		
+		public void run(){
+			try {
+				// Create a new user for this maze.
+				
+				VirtualUser vu = new VirtualUser(mz);
+				if (self == null)
+					self = vu;
+				
+				// Move until all moves done.
+				while (true) {
+					vu.move();
+					sleep(150);
+				}
+			}
+			catch (InterruptedException ex) {
+				ex.printStackTrace();
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	    }
 	}
 
 	//Get a parameter value
@@ -122,7 +189,7 @@ public class Maze extends Applet {
 	public void paint (Graphics g) {
 		int x, y;
 
-		// Tegner baser på box-definisjonene ....
+		// Tegner baser pï¿½ box-definisjonene ....
 
 		for (x = 1; x < (dim - 1); ++x)
 			for (y = 1; y < (dim - 1); ++y) {
@@ -135,6 +202,30 @@ public class Maze extends Applet {
 				if (maze[x][y].getRight() == null)
 					g.drawLine(x * 10 + 10, y * 10, x * 10 + 10, y * 10 + 10);
 			}
+		
+		if (self != null)
+			drawMap(g);
+	}
+	
+	private void drawMap(Graphics g) {
+		HashMap<String, Color> map = self.getMap();
+		
+		Set<String> keys = map.keySet();
+		Iterator<String> it = keys.iterator();
+		while(it.hasNext()) {
+			String key = it.next();
+			String[] pos = key.split(",");
+			int x = new Integer(pos[0]);
+			int y = new Integer(pos[1]);
+			g.setColor(map.get(key));
+			g.fillOval((x * 10)+2, (y * 10)+2, 7, 7);
+		}
+
+		g.setColor(Color.black);
+	}
+	
+	public boolean belongsToUser(Integer id) {
+		return self.getId() == id;
 	}
 }
 

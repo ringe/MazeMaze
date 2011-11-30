@@ -1,7 +1,7 @@
 package mazeoblig;
 
 /************************************************************************
- * Denne koden skal ikke røres
+ * Denne koden skal ikke rï¿½res
  ***********************************************************************/
 
 /**
@@ -17,32 +17,78 @@ package mazeoblig;
  * @author not attributable
  * @version 1.0
  */
+import java.awt.Color;
 import java.rmi.server.UnicastRemoteObject;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
+
+import simulator.PositionInMaze;
+import simulator.User;
 
 public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 {
-    private int maze[][];
+	private static final long serialVersionUID = -2163647278903288857L;
+	
+	private int maze[][];
     protected Box boxmaze[][];
     private int size = 50;
+    
+    // Users
+    private HashMap<Integer, User> users = new HashMap<Integer, User>();
+    private HashMap<Integer, PositionInMaze> positions = new HashMap<Integer, PositionInMaze>();
+    private ArrayList<Integer> removables = new ArrayList<Integer>();
+	private int nextId = 0;
+	
+	/**
+     * Thread to update clients about positions
+     * @author runar
+     *
+     */
+    private class Sender extends Thread {
+		@Override
+		public void run() {
+			try {
+				while(true) {
+					sleep(150);
+					removeUsers();
+					if (users.size() > 0)
+						sendUpdate();
+				}
+			} catch (InterruptedException ie) {
+				ie.printStackTrace();
+			}
+		}
+	}
+    
     /**
-     * Konstruktør
-     * Randomiserer opp en tilfeldig labyrint på 20 x 20 bokser hvor veggene
-     * i mellom boksen er "fjernet slik at man får en labyint.
+     * Konstruktï¿½r
+     * Randomiserer opp en tilfeldig labyrint pï¿½ 20 x 20 bokser hvor veggene
+     * i mellom boksen er "fjernet slik at man fï¿½r en labyint.
      */
     public BoxMaze() throws RemoteException {
         init(size);
     }
 
-    public BoxMaze(int newSize) throws RemoteException {
+    public void removeUsers() { synchronized(users) { synchronized(positions) { 
+		for (int i = 0; i < removables.size(); i++) {
+			users.remove(removables.get(i));
+			positions.remove(removables.get(i));
+		}
+	}}}
+
+	public BoxMaze(int newSize) throws RemoteException {
         size = newSize;
         init(size);
     }
+    
     /**
      * Genererer labyrinten. Koden er i all vesentlig grad hentet fra en enkel
-     * algoritme som er publisert på http://en.wikipedia.org/wiki/Image:Maze.png
+     * algoritme som er publisert pï¿½ http://en.wikipedia.org/wiki/Image:Maze.png
      *
-     * Algoritmen er skrevet om til å håndtere boksene
+     * Algoritmen er skrevet om til ï¿½ hï¿½ndtere boksene
      */
     private void init (int size) {
         int x, y, n, d;
@@ -52,7 +98,6 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 
         /* We want to create a maze on a grid. */
         maze = new int[size][size];
-
 
         /* We start with a grid full of walls. */
         for (x = 0; x < size; ++x)
@@ -148,6 +193,11 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
                     boxmaze[x + 1][y].setLeft(null);
                 }
             }
+        
+        /* Start the Sender thread */
+        Sender s = new Sender();
+		s.setDaemon(true);
+		s.start();
     }
 
     /**
@@ -158,6 +208,47 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
     public Box [][] getMaze() throws RemoteException {
         return boxmaze;
     }
+
+    /**
+     * Add a new user to this Maze
+     */
+	@Override
+	public Integer join(User user) throws RemoteException { synchronized(users) {
+		int id = nextId++;
+		users.put(id, user);
+		return id;
+	}}
+
+	@Override
+	public void update(Integer id, PositionInMaze positionInMaze) { synchronized(positions) {
+		positions.put(id, positionInMaze);
+	}}
+	
+	public void sendUpdate() {
+		synchronized(users) {
+			synchronized(positions) {
+		HashMap<String,Color> map = new HashMap<String,Color>();
+		
+		Set<Integer> keys = positions.keySet();
+		Iterator<Integer> it = keys.iterator();
+		while(it.hasNext()) {
+			PositionInMaze pos = positions.get(it.next());
+			map.put(pos.getXpos() + "," + pos.getYpos(), pos.getColor());
+		}
+		
+		Set<Integer> ids = users.keySet();
+		Iterator<Integer> usr = ids.iterator();
+		while(usr.hasNext()) {
+			int id = usr.next();
+			User user = users.get(id);
+			try {
+				user.updateMap(map);
+			} catch (RemoteException e) {
+				removables.add(id);
+			}
+		}
+
+	}}}
 
 
 }

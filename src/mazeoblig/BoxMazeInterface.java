@@ -2,6 +2,9 @@ package mazeoblig;
 
 import java.rmi.*;
 
+import simulator.PositionInMaze;
+import simulator.User;
+
 /**
  * <p>Title: </p>
  *
@@ -16,4 +19,8 @@ import java.rmi.*;
  */
 public interface BoxMazeInterface extends Remote {
     public Box [][] getMaze() throws RemoteException;
+
+	public Integer join(User virtualUser) throws RemoteException;
+
+	public void update(Integer id, PositionInMaze positionInMaze) throws RemoteException;
 }
