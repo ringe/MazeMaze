@@ -216,6 +216,7 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 	public Integer join(User user) throws RemoteException { synchronized(users) {
 		int id = nextId++;
 		users.put(id, user);
+		System.out.println(id);
 		return id;
 	}}
 
@@ -224,9 +225,7 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 		positions.put(id, positionInMaze);
 	}}
 	
-	public void sendUpdate() {
-		synchronized(users) {
-			synchronized(positions) {
+	public synchronized void sendUpdate() { synchronized(users) { synchronized(positions) {
 		HashMap<String,Color> map = new HashMap<String,Color>();
 		
 		Set<Integer> keys = positions.keySet();

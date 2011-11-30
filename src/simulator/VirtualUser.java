@@ -34,9 +34,9 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	private Box[][] maze;
 	private int dim;
 
-	static int xp;
-	static int yp;
-	static boolean found = false;
+	int xp;
+	int yp;
+	boolean found = false;
 
 	
 	private Stack <PositionInMaze> myWay = new Stack<PositionInMaze>();
@@ -48,16 +48,20 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	private Maze client;
 	private HashMap<String, Color> usersMap = new HashMap<String, Color>();
 	private int position;
-	private boolean firstRun = true;
 	private Integer id;
+
+	private BoxMazeInterface server;
+
+	private PositionInMaze[] moves;
 	
 	/**
 	 * Constructor for the local user
 	 * @param mz
 	 */
-	public VirtualUser(Maze mz) throws RemoteException {
+	public VirtualUser(BoxMazeInterface bm, Maze mz) throws RemoteException {
+		server = bm;
 		client = mz;
-		maze = client.maze;
+		maze = server.getMaze();
 		dim = maze[0].length;
 		init();
 	}
@@ -75,16 +79,7 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	 * Initsierer en tilfeldig posisjon i labyrint
 	 */
 	private void init() {
-		// Join the Maze, get User Id
-		try {
-			id = client.bm.join(this);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-		
-		position = 0;
-		
-		// Setter en tifeldig posisjon i maze (xp og yp)
+// Setter en tifeldig posisjon i maze (xp og yp)
 		Random rand = new Random();
 		xp = rand.nextInt(dim - 1) + 1;
 		yp = rand.nextInt(dim - 1) + 1;
@@ -93,6 +88,18 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 		makeFirstIteration();
 		// og deretter l�ses labyrinten basert p� inngang fra starten 
 		makeNextIteration();
+		
+		// Set moves and position
+		// Choose the relevant path to follow.
+		moves = getFirstIterationLoop();
+		position = 0;
+		
+		// Join the Maze, get User Id
+		try {
+			id = server.join(this);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -278,8 +285,9 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	@Override
 	public void updateMap(HashMap<String, Color> map) throws RemoteException {
 		usersMap = map;
-		if (client.belongsToUser(id))
-			client.repaint();
+		if (client != null)
+			if (client.belongsToUser(id))
+				client.repaint();
 	}
 	
 	/**
@@ -294,19 +302,17 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	 * Perform move and update server about position
 	 */
 	public void move() {
-		// Choose the relevant path to follow.
-		PositionInMaze[] pos = (firstRun ? getFirstIterationLoop() : getIterationLoop());
-		firstRun = false;
-		
 		// Perform move
-		if (position < (pos.length - 1))
+		if (position < (moves.length - 1))
 			position++;
-		else
+		else {
 			position = 0;
+			moves = getIterationLoop();
+		}
 	
 		// Update server about position
 		try {
-			client.bm.update(id, pos[position]);
+			server.update(id, moves[position]);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

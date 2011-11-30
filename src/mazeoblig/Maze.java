@@ -33,8 +33,8 @@ public class Maze extends Applet {
 
 	private static final long serialVersionUID = -4427531806078172174L;
 	
-	public BoxMazeInterface bm;
-	public Box[][] maze;
+	private BoxMazeInterface bm;
+	private Box[][] maze;
 	public static int DIM = 30;
 	private int dim = DIM;
 
@@ -53,6 +53,16 @@ public class Maze extends Applet {
 	 */
 	public void init() {
 		/*
+		 * Simulerer et antall spillere
+		 */
+		LotsOfPlayers pl = new LotsOfPlayers(2000, this);
+		pl.setDaemon(true);
+		pl.start();
+	}
+	
+	public BoxMazeInterface connect() {
+
+		/*
 		 ** Kobler opp mot RMIServer, under forutsetning av at disse
 		 ** kj�rer p� samme maskin. Hvis ikke m� oppkoblingen
 		 ** skrives om slik at dette passer med virkeligheten.
@@ -69,32 +79,13 @@ public class Maze extends Applet {
 			/*
 			 ** Henter inn referansen til Labyrinten (ROR)
 			 */
-			bm = (BoxMazeInterface) r.lookup(RMIServer.MazeName);
-			maze = bm.getMaze();
-			
-			/*
-			 * Simulerer et antall spillere
-			 */
-			LotsOfPlayers pl = new LotsOfPlayers(100, this);
-			pl.setDaemon(true);
-			pl.start();
+			BoxMazeInterface boxmaze = (BoxMazeInterface) r.lookup(RMIServer.MazeName);
+			if (maze == null)
+				maze = boxmaze.getMaze();
+			if (bm == null)
+				bm = boxmaze;
 
-			
-/*
-** Finner l�sningene ut av maze - se for�vrig kildekode for VirtualMaze for ytterligere
-** kommentarer. L�sningen er implementert med backtracking-algoritme
-*
-			VirtualUser vu = new VirtualUser(maze);
-			PositionInMaze [] pos;
-/*			pos = vu.getFirstIterationLoop();
-
-			for (int i = 0; i < pos.length; i++)
-				System.out.println(pos[i]);
-*
-			pos = vu.getIterationLoop();
-			for (int i = 0; i < pos.length; i++)
-				System.out.println(pos[i]);
-/**/			
+			return boxmaze;
 		}
 		catch (RemoteException e) {
 			System.err.println("Remote Exception: " + e.getMessage());
@@ -111,6 +102,7 @@ public class Maze extends Applet {
 			System.err.println("Not Bound Exception: " + f.getMessage());
 			System.exit(0);
 		}
+		return null;
 	}
 	
 	// Thread to start a number of players
@@ -128,7 +120,7 @@ public class Maze extends Applet {
 				w.setDaemon(true);
 				w.start();
 				try {
-					sleep(150);
+					sleep(100);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -147,7 +139,7 @@ public class Maze extends Applet {
 			try {
 				// Create a new user for this maze.
 				
-				VirtualUser vu = new VirtualUser(mz);
+				VirtualUser vu = new VirtualUser(connect(), (self == null) ? mz : null);
 				if (self == null)
 					self = vu;
 				
@@ -191,17 +183,18 @@ public class Maze extends Applet {
 
 		// Tegner baser p� box-definisjonene ....
 
-		for (x = 1; x < (dim - 1); ++x)
-			for (y = 1; y < (dim - 1); ++y) {
-				if (maze[x][y].getUp() == null)
-					g.drawLine(x * 10, y * 10, x * 10 + 10, y * 10);
-				if (maze[x][y].getDown() == null)
-					g.drawLine(x * 10, y * 10 + 10, x * 10 + 10, y * 10 + 10);
-				if (maze[x][y].getLeft() == null)
-					g.drawLine(x * 10, y * 10, x * 10, y * 10 + 10);
-				if (maze[x][y].getRight() == null)
-					g.drawLine(x * 10 + 10, y * 10, x * 10 + 10, y * 10 + 10);
-			}
+		if (maze != null)
+			for (x = 1; x < (dim - 1); ++x)
+				for (y = 1; y < (dim - 1); ++y) {
+					if (maze[x][y].getUp() == null)
+						g.drawLine(x * 10, y * 10, x * 10 + 10, y * 10);
+					if (maze[x][y].getDown() == null)
+						g.drawLine(x * 10, y * 10 + 10, x * 10 + 10, y * 10 + 10);
+					if (maze[x][y].getLeft() == null)
+						g.drawLine(x * 10, y * 10, x * 10, y * 10 + 10);
+					if (maze[x][y].getRight() == null)
+						g.drawLine(x * 10 + 10, y * 10, x * 10 + 10, y * 10 + 10);
+				}
 		
 		if (self != null)
 			drawMap(g);
