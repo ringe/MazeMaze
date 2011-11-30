@@ -52,7 +52,7 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 		public void run() {
 			try {
 				while(true) {
-					sleep(150);
+					sleep(75);
 					removeUsers();
 					if (users.size() > 0)
 						sendUpdate();
@@ -64,24 +64,28 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 	}
     
     /**
+     * Start the Sender Thread
+     */
+    private void startSender() {
+        Sender s = new Sender();
+		s.setDaemon(true);
+		s.start();
+    }
+    
+    /**
      * Konstrukt�r
      * Randomiserer opp en tilfeldig labyrint p� 20 x 20 bokser hvor veggene
      * i mellom boksen er "fjernet slik at man f�r en labyint.
      */
     public BoxMaze() throws RemoteException {
         init(size);
+        startSender();
     }
-
-    public void removeUsers() { synchronized(users) { synchronized(positions) { 
-		for (int i = 0; i < removables.size(); i++) {
-			users.remove(removables.get(i));
-			positions.remove(removables.get(i));
-		}
-	}}}
 
 	public BoxMaze(int newSize) throws RemoteException {
         size = newSize;
         init(size);
+        startSender();
     }
     
     /**
@@ -193,11 +197,6 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
                     boxmaze[x + 1][y].setLeft(null);
                 }
             }
-        
-        /* Start the Sender thread */
-        Sender s = new Sender();
-		s.setDaemon(true);
-		s.start();
     }
 
     /**
@@ -219,6 +218,14 @@ public class BoxMaze extends UnicastRemoteObject implements BoxMazeInterface
 		System.out.println(id);
 		return id;
 	}}
+	
+
+    public void removeUsers() { synchronized(users) { synchronized(positions) { 
+		for (int i = 0; i < removables.size(); i++) {
+			users.remove(removables.get(i));
+			positions.remove(removables.get(i));
+		}
+	}}}
 
 	@Override
 	public void update(Integer id, PositionInMaze positionInMaze) { synchronized(positions) {

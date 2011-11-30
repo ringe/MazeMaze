@@ -14,7 +14,7 @@ import java.util.Arrays;
 /**
  * Instansen av denne klassen tilbyr i praksis tre metoder til programmereren. Disse er:
  * <p>
- * a. Konstrukt�ren (som tar imot en Maze som parameter<br>
+ * a. Konstruktøren (som tar imot en Maze (applet) som parameter<br>
  * b. getFirstIterationLoop() som returnerer en rekke med posisjoner i Maze som finner veien<br>
  *    ut av Maze og reposisjonerer "spilleren" ved starten av Maze basert p� en tilfeldig <br>
  *    posisjonering av spilleren i Maze<br>
@@ -24,7 +24,7 @@ import java.util.Arrays;
  * Ideen er at programmereren skal kunne benytte disse ferdig definerte posisjonene til � simulere
  * hvordan en bruker forflytter seg i en labyrint.
  *     
- * @author asd
+ * @author asd, runar
  *
  */
 public class VirtualUser extends UnicastRemoteObject implements User {
@@ -47,12 +47,14 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	private Color color = Color.black;
 	private Maze client;
 	private HashMap<String, Color> usersMap = new HashMap<String, Color>();
-	private int position;
+	private int position = 0;
 	private Integer id;
 
 	private BoxMazeInterface server;
 
 	private PositionInMaze[] moves;
+
+	private boolean turn = true;
 	
 	/**
 	 * Constructor for the local user
@@ -65,21 +67,13 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 		dim = maze[0].length;
 		init();
 	}
-	
+
 	/**
-	 * Konstrukt�r
-	 * @param maze
-	 */
-	public VirtualUser(Box[][] maze) throws RemoteException {
-		this.maze = maze;
-		dim = maze[0].length;
-		init();
-	}
-	/**
-	 * Initsierer en tilfeldig posisjon i labyrint
+	 * Initiate the VirtualUser: Create a random start position, calculate
+	 * moves and join the server.
 	 */
 	private void init() {
-// Setter en tifeldig posisjon i maze (xp og yp)
+		// Setter en tifeldig posisjon i maze (xp og yp)
 		Random rand = new Random();
 		xp = rand.nextInt(dim - 1) + 1;
 		yp = rand.nextInt(dim - 1) + 1;
@@ -88,11 +82,6 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 		makeFirstIteration();
 		// og deretter l�ses labyrinten basert p� inngang fra starten 
 		makeNextIteration();
-		
-		// Set moves and position
-		// Choose the relevant path to follow.
-		moves = getFirstIterationLoop();
-		position = 0;
 		
 		// Join the Maze, get User Id
 		try {
@@ -280,10 +269,9 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	}
 
 	/**
-	 * Receive a map of user's positions
+	 * Receive a map of user's positions and update the client.
 	 */
-	@Override
-	public void updateMap(HashMap<String, Color> map) throws RemoteException {
+	@Override public void updateMap(HashMap<String, Color> map) throws RemoteException {
 		usersMap = map;
 		if (client != null)
 			if (client.belongsToUser(id))
@@ -291,23 +279,21 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 	}
 	
 	/**
-	 * Return a map of user's positions
-	 * @return
+	 * Return a map of all known user's positions
+	 * @return HashMap of strings and colors
 	 */
-	public HashMap<String, Color> getMap() {
-		return usersMap;
-	}
+	public HashMap<String, Color> getMap() { return usersMap; }
 	
 	/**
 	 * Perform move and update server about position
 	 */
 	public void move() {
-		// Perform move
+		// Perform move until out of moves
 		if (position < (moves.length - 1))
 			position++;
-		else {
+		else { // Start over from random start or go through the maze 
 			position = 0;
-			moves = getIterationLoop();
+			moves = turn  ? getIterationLoop(): getFirstIterationLoop();
 		}
 	
 		// Update server about position
@@ -319,8 +305,8 @@ public class VirtualUser extends UnicastRemoteObject implements User {
 		}
 	}
 
-	@Override
-	public Integer getId() {
-		return id;
-	}
+	/**
+	 * Return User Id.
+	 */
+	@Override public Integer getId() { return id; }
 }

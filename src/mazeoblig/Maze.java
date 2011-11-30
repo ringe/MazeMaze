@@ -45,21 +45,25 @@ public class Maze extends Applet {
 	private String server_hostname;
 	private int server_portnumber;
 
-	public VirtualUser self;
-
+	// The VirtualUser related to this Maze client.
+	private VirtualUser self;
+	
+	// n number of users to create
+	private int n = 100;
 
 	/**
-	 * Henter labyrinten fra RMIServer
+	 * Initiate a simulation of n number of Users.
 	 */
 	public void init() {
-		/*
-		 * Simulerer et antall spillere
-		 */
-		LotsOfPlayers pl = new LotsOfPlayers(2000, this);
+		LotsOfPlayers pl = new LotsOfPlayers(n, this);
 		pl.setDaemon(true);
 		pl.start();
 	}
 	
+	/**
+	 * Establish an RMI connection to the Server BoxMaze object. 
+	 * @return BoxMazeInterface
+	 */
 	public BoxMazeInterface connect() {
 
 		/*
@@ -105,15 +109,24 @@ public class Maze extends Applet {
 		return null;
 	}
 	
-	// Thread to start a number of players
+	/**
+	 *  Thread to start a number of players
+	 * @author runar
+	 */
 	class LotsOfPlayers extends Thread {
 		private int n;
 		private Maze mz;
 		
-		LotsOfPlayers(int c, Maze m) {
-			n = c; mz = m;
-		}
+		/**
+		 * Constructor
+		 * @param c number of players to create
+		 * @param m client to connect to
+		 */
+		LotsOfPlayers(int c, Maze m) { n = c; mz = m; }
 		
+		/**
+		 * run the thread to create new Workers
+		 */
 		public void run() {
 			for ( int i = n; i != 0; i--) {
 				Worker w = new Worker(mz);
@@ -128,22 +141,23 @@ public class Maze extends Applet {
 		}
 	}
 	
+	/**
+	 * Start a Worker Thread for each VirtualUser.
+	 * @author runar
+	 */
 	private class Worker extends Thread {
 		private Maze mz;
 		
-		public Worker(Maze m) {
-			mz = m;
-		}
+		public Worker(Maze m) { mz = m; }
 		
 		public void run(){
 			try {
 				// Create a new user for this maze.
-				
 				VirtualUser vu = new VirtualUser(connect(), (self == null) ? mz : null);
 				if (self == null)
 					self = vu;
 				
-				// Move until all moves done.
+				// Move VirtualUser eternally
 				while (true) {
 					vu.move();
 					sleep(150);
