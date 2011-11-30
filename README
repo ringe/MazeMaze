@@ -2,8 +2,11 @@ The MazeMaze is a School project.
 
 This is a Java RMI implementation of a Maze MMO simulation at a very basic level.
 
-To run the code, import the project to Eclipse and:
-1. Start the RMIServer.
-2. Start the Maze applet.
+To run the code:
+1. Download project from https://github.com/ringe/MazeMaze/zipball/master
+2. Import the project to Eclipse
+3. Start the RMIServer in mazeoblig
+4. Start the Maze applet in mazeoblig
+5. Watch.
 
-Enjoy.
+Enjoy, I didn't.

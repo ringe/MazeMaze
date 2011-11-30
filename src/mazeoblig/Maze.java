@@ -81,8 +81,7 @@ public class Maze extends Applet {
 			/*
 			 * * Henter inn referansen til Labyrinten (ROR)
 			 */
-			BoxMazeInterface boxmaze = (BoxMazeInterface) r
-					.lookup(RMIServer.MazeName);
+			BoxMazeInterface boxmaze = (BoxMazeInterface) r.lookup(RMIServer.MazeName);
 			if (maze == null)
 				maze = boxmaze.getMaze();
 			if (bm == null)
@@ -90,7 +89,7 @@ public class Maze extends Applet {
 
 			return boxmaze;
 		} catch (RemoteException e) {
-			System.err.println("Remote Exception: " + e.getMessage());
+			System.err.println("Remote Exception: " + e.getMessage() + "\nDid you start the RMIServer?");
 			System.exit(0);
 		} catch (NotBoundException f) {
 			/*
