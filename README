@@ -10,3 +10,21 @@ To run the code:
 5. Watch.
 
 Enjoy, I didn't.
+
+DESCRIPTION of the Process
+
+mazeoblig.RMIServer starts the RMI registry and binds a
+mazeoblig.BoxMaze object to the /maze url. Then the
+mazeoblig.Maze applet is started and loads a
+mazeoblig.Maze.LotsOfUsers thread to start n number of
+mazeoblig.Maze.Worker threads, which each create one
+simulator.VirtualUser that join() the BoxMaze through the
+mazeoblig.BoxMazeInterface and then makes the VirtualUser move() every so often
+VirtualUser.move() sends and update() call through the
+mazeoblig.BoxMazeInterface to the BoxMaze instance at
+mazeoblig.RMIServer who's
+mazeoblig.RMIServer.Sender thread runs updateMap() on the
+simulator.User interface for each registered VirtualUser which calls repaint() on
+mazeoblig.Maze every time this happens.
+
+And thar she goes!
